@@ -1,0 +1,1148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kitchen Compliance Log — FSSAI Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #12181a;
+    --surface: #1b2426;
+    --surface-raised: #232e30;
+    --border: #34403f;
+    --border-soft: #2a3436;
+    --text-primary: #edf1ef;
+    --text-secondary: #9bb0ac;
+    --text-dim: #6c7f7c;
+    --teal: #4fb8ae;
+    --teal-dim: #33726c;
+    --amber: #e8a33d;
+    --red: #e2574c;
+    --green: #6fbf73;
+    --rivet: #3a4a48;
+    --radius: 3px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text-primary);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+  }
+  ::selection{background:var(--teal-dim);color:#fff;}
+
+  /* ---- Layout ---- */
+  .app{ display:flex; min-height:100vh; }
+  .sidebar{
+    width:230px; flex-shrink:0;
+    background:linear-gradient(180deg,#161e20,#111716);
+    border-right:1px solid var(--border);
+    display:flex; flex-direction:column;
+    padding:20px 0;
+  }
+  .brand{
+    padding:0 20px 20px 20px;
+    border-bottom:1px solid var(--border-soft);
+    margin-bottom:14px;
+  }
+  .brand .tag{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px; letter-spacing:2px; color:var(--teal);
+    text-transform:uppercase;
+  }
+  .brand h1{
+    font-family:'Bebas Neue',sans-serif;
+    font-size:26px; letter-spacing:1px; margin:4px 0 0 0;
+    line-height:1.05; color:var(--text-primary);
+  }
+  .brand .restname{
+    font-size:11px; color:var(--text-secondary); margin-top:6px;
+    font-family:'IBM Plex Mono',monospace;
+  }
+  nav{ display:flex; flex-direction:column; gap:2px; padding:0 10px; }
+  nav button{
+    all:unset; cursor:pointer;
+    display:flex; align-items:center; gap:10px;
+    padding:10px 12px; border-radius:var(--radius);
+    color:var(--text-secondary);
+    font-size:13px; font-weight:500;
+    border-left:2px solid transparent;
+  }
+  nav button .num{
+    font-family:'IBM Plex Mono',monospace; font-size:10px;
+    color:var(--text-dim); width:16px;
+  }
+  nav button:hover{ background:var(--surface); color:var(--text-primary); }
+  nav button.active{
+    background:var(--surface-raised); color:var(--teal);
+    border-left:2px solid var(--teal);
+  }
+  nav button.active .num{ color:var(--teal); }
+  .sidebar-foot{
+    margin-top:auto; padding:14px 20px 0 20px; border-top:1px solid var(--border-soft);
+    font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--text-dim);
+  }
+
+  .main{ flex:1; padding:28px 36px 60px 36px; max-width:1080px; }
+  .topbar{
+    display:flex; justify-content:space-between; align-items:flex-end;
+    margin-bottom:26px; flex-wrap:wrap; gap:12px;
+  }
+  .topbar h2{
+    font-family:'Bebas Neue',sans-serif; font-size:32px; letter-spacing:0.5px;
+    margin:0; color:var(--text-primary);
+  }
+  .topbar .sub{ color:var(--text-secondary); font-size:13px; margin-top:4px; }
+  .today-badge{
+    font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--text-secondary);
+    background:var(--surface); border:1px solid var(--border); padding:8px 14px; border-radius:var(--radius);
+  }
+  .today-badge b{ color:var(--teal); }
+
+  .grid{ display:grid; gap:16px; }
+  .grid.cols-3{ grid-template-columns:repeat(3,1fr); }
+  .grid.cols-2{ grid-template-columns:repeat(2,1fr); }
+  @media (max-width:900px){ .grid.cols-3, .grid.cols-2{ grid-template-columns:1fr; } .sidebar{width:180px;} }
+
+  .card{
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+    padding:18px 20px;
+  }
+  .card h3{
+    font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:1.5px;
+    text-transform:uppercase; color:var(--text-dim); margin:0 0 14px 0;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .stat-big{ font-family:'Bebas Neue',sans-serif; font-size:42px; line-height:1; }
+  .stat-label{ font-size:12px; color:var(--text-secondary); margin-top:6px; }
+  .pill{
+    display:inline-block; padding:3px 9px; border-radius:20px;
+    font-size:11px; font-family:'IBM Plex Mono',monospace; font-weight:500;
+  }
+  .pill.ok{ background:rgba(111,191,115,0.14); color:var(--green); }
+  .pill.warn{ background:rgba(232,163,61,0.14); color:var(--amber); }
+  .pill.bad{ background:rgba(226,87,76,0.14); color:var(--red); }
+  .pill.neutral{ background:rgba(155,176,172,0.14); color:var(--text-secondary); }
+
+  /* ---- Gauge (signature element) ---- */
+  .gaugeplate{
+    background:
+      radial-gradient(circle at 8px 8px, var(--rivet) 1.5px, transparent 1.6px) 0 0/16px 16px,
+      linear-gradient(155deg,#20292b,#161e1f);
+    border:1px solid var(--border); border-radius:var(--radius);
+    padding:14px 16px 12px 16px; position:relative;
+  }
+  .gaugeplate .unit-name{
+    font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--text-secondary);
+    display:flex; justify-content:space-between; margin-bottom:8px;
+  }
+  .gauge-row{ display:flex; align-items:center; gap:12px; }
+  .gauge-track{
+    position:relative; flex:1; height:10px; border-radius:6px;
+    background:#0e1415; border:1px solid var(--border-soft);
+    overflow:hidden;
+  }
+  .gauge-fill{ position:absolute; top:0; left:0; bottom:0; border-radius:6px; transition:width .4s; }
+  .gauge-needle{
+    position:absolute; top:-3px; width:2px; height:16px; background:#fff;
+    box-shadow:0 0 4px rgba(255,255,255,0.6); transition:left .4s;
+  }
+  .gauge-reading{ font-family:'Bebas Neue',sans-serif; font-size:26px; min-width:70px; text-align:right; }
+  .gauge-range{ font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--text-dim); margin-top:6px; }
+
+  /* ---- Forms ---- */
+  label{ display:block; font-size:12px; color:var(--text-secondary); margin-bottom:5px; font-weight:500; }
+  input, select, textarea{
+    width:100%; background:var(--bg); border:1px solid var(--border); color:var(--text-primary);
+    padding:9px 11px; border-radius:var(--radius); font-family:'Inter',sans-serif; font-size:13px;
+  }
+  input:focus, select:focus, textarea:focus{ outline:none; border-color:var(--teal); }
+  input[type="number"]{ font-family:'IBM Plex Mono',monospace; }
+  .field{ margin-bottom:14px; }
+  .row-fields{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  button.btn{
+    all:unset; cursor:pointer; font-family:'Inter',sans-serif; font-weight:600; font-size:13px;
+    padding:10px 18px; border-radius:var(--radius); background:var(--teal); color:#0d1413;
+    display:inline-flex; align-items:center; gap:6px;
+  }
+  button.btn:hover{ background:#63c9bf; }
+  button.btn.ghost{
+    background:transparent; border:1px solid var(--border); color:var(--text-secondary);
+  }
+  button.btn.ghost:hover{ border-color:var(--teal); color:var(--teal); }
+  button.btn.danger{ background:transparent; border:1px solid var(--red); color:var(--red); }
+  button.btn.small{ padding:6px 12px; font-size:11px; }
+
+  .checkline{
+    display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--border-soft);
+  }
+  .checkline:last-child{ border-bottom:none; }
+  .checkline input[type="checkbox"]{ width:16px; height:16px; accent-color:var(--teal); }
+  .checkline .txt{ flex:1; font-size:13px; }
+  .checkline .freq{ font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--text-dim); }
+
+  table{ width:100%; border-collapse:collapse; font-size:12.5px; }
+  th{
+    text-align:left; font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:1px;
+    color:var(--text-dim); text-transform:uppercase; padding:8px 10px; border-bottom:1px solid var(--border);
+  }
+  td{ padding:9px 10px; border-bottom:1px solid var(--border-soft); font-family:'IBM Plex Mono',monospace; }
+  tr:hover td{ background:rgba(255,255,255,0.02); }
+
+  .cat-header{
+    font-family:'Bebas Neue',sans-serif; font-size:18px; letter-spacing:0.5px; color:var(--teal);
+    margin:22px 0 6px 0; padding-top:10px; border-top:1px solid var(--border-soft);
+  }
+  .cat-header:first-child{ border-top:none; margin-top:0; }
+
+  .rule-block{ margin-bottom:20px; }
+  .rule-block h4{ font-size:14px; margin:0 0 6px 0; color:var(--text-primary); }
+  .rule-block p{ font-size:13px; color:var(--text-secondary); line-height:1.6; margin:0 0 4px 0; }
+  .threshold-tag{
+    font-family:'IBM Plex Mono',monospace; font-size:11px; background:var(--surface-raised);
+    border:1px solid var(--border); padding:2px 8px; border-radius:3px; color:var(--teal); margin-right:6px;
+  }
+  .disclaimer{
+    font-size:12px; color:var(--text-dim); background:var(--surface-raised); border:1px dashed var(--border);
+    padding:12px 14px; border-radius:var(--radius); margin-bottom:20px; line-height:1.6;
+  }
+  .empty{ color:var(--text-dim); font-size:13px; font-style:italic; padding:20px 0; }
+  .unit-manage-row{ display:flex; gap:8px; align-items:center; margin-bottom:8px; }
+  .unit-manage-row input{ flex:1; }
+  .tab-content{ display:none; }
+  .tab-content.active{ display:block; animation:fadein .25s ease; }
+  @keyframes fadein{ from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);} }
+  .toast{
+    position:fixed; bottom:24px; right:24px; background:var(--surface-raised); border:1px solid var(--teal);
+    color:var(--text-primary); padding:12px 18px; border-radius:var(--radius); font-size:13px;
+    opacity:0; transform:translateY(8px); transition:all .3s; pointer-events:none; z-index:50;
+  }
+  .toast.show{ opacity:1; transform:translateY(0); }
+
+  /* ---- Login ---- */
+  #login-screen{
+    position:fixed; inset:0; background:var(--bg); z-index:100;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .login-card{
+    width:340px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+    padding:32px 28px;
+  }
+  .login-card .tag{
+    font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:2px; color:var(--teal);
+    text-transform:uppercase;
+  }
+  .login-card h1{
+    font-family:'Bebas Neue',sans-serif; font-size:30px; margin:4px 0 20px 0; letter-spacing:0.5px;
+  }
+  .login-card .field{ margin-bottom:16px; }
+  .login-err{ color:var(--red); font-size:12px; margin-bottom:10px; min-height:14px; }
+  .signature-tag{
+    font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--text-dim);
+    display:inline-flex; align-items:center; gap:5px;
+  }
+  .signature-tag .who{ color:var(--teal); }
+  .user-chip{
+    display:flex; align-items:center; gap:8px; padding:8px 20px 4px 20px; font-size:12px; color:var(--text-secondary);
+  }
+  .user-chip b{ color:var(--text-primary); }
+  .user-chip button{
+    all:unset; cursor:pointer; font-size:11px; color:var(--text-dim); text-decoration:underline; margin-left:auto;
+  }
+  .user-chip button:hover{ color:var(--red); }
+  .staff-row{ display:flex; gap:8px; align-items:center; margin-bottom:8px; }
+  .staff-row input{ flex:1; }
+  .staff-row select{ max-width:130px; }
+</style>
+</head>
+<body>
+
+<div id="login-screen">
+  <div class="login-card">
+    <div class="tag">FoSCoS / Schedule 4</div>
+    <h1>Sign in</h1>
+    <div class="field">
+      <label>Staff member</label>
+      <select id="login-name"></select>
+    </div>
+    <div class="field">
+      <label>PIN</label>
+      <input type="password" id="login-pin" maxlength="6" placeholder="4-6 digit PIN">
+    </div>
+    <div class="login-err" id="login-err"></div>
+    <button class="btn" id="login-btn" style="width:100%;justify-content:center;">Sign in</button>
+    <div style="margin-top:16px; font-size:11px; color:var(--text-dim); line-height:1.6;">
+      No name on the list yet? Add staff from Settings once signed in as the first user — first sign-in creates the manager account.
+    </div>
+  </div>
+</div>
+
+<div class="app" id="app-root" style="display:none;">
+  <div class="sidebar">
+    <div class="brand">
+      <div class="tag">FoSCoS / Schedule 4</div>
+      <h1>KITCHEN<br>LOGBOOK</h1>
+      <div class="restname" id="sb-restname">no restaurant set</div>
+    </div>
+    <div class="user-chip">
+      Signed in as <b id="user-chip-name">—</b>
+      <button id="logout-btn">Sign out</button>
+    </div>
+    <nav>
+      <button data-tab="dashboard" class="active"><span class="num">01</span>Dashboard</button>
+      <button data-tab="dailylog"><span class="num">02</span>Daily Log</button>
+      <button data-tab="history"><span class="num">03</span>Log History</button>
+      <button data-tab="checklist"><span class="num">04</span>Checklists</button>
+      <button data-tab="rules"><span class="num">05</span>FSSAI Reference</button>
+      <button data-tab="settings"><span class="num">06</span>Settings</button>
+    </nav>
+    <div class="sidebar-foot">
+      Mumbai, Maharashtra<br>
+      Local data, private to this device
+    </div>
+  </div>
+
+  <div class="main">
+
+    <!-- DASHBOARD -->
+    <div class="tab-content active" id="tab-dashboard">
+      <div class="topbar">
+        <div>
+          <h2>Today's Status</h2>
+          <div class="sub" id="dash-date"></div>
+        </div>
+        <div class="today-badge" id="dash-compliance-badge">—</div>
+      </div>
+
+      <div class="grid cols-3" style="margin-bottom:18px;">
+        <div class="card">
+          <h3>Temp readings logged</h3>
+          <div class="stat-big" id="dash-temps-count">0/0</div>
+          <div class="stat-label">units checked today</div>
+        </div>
+        <div class="card">
+          <h3>Checklist done today</h3>
+          <div class="stat-big" id="dash-checklist-count">0/0</div>
+          <div class="stat-label">daily items completed</div>
+        </div>
+        <div class="card">
+          <h3>Open alerts</h3>
+          <div class="stat-big" id="dash-alerts-count">0</div>
+          <div class="stat-label">out-of-range or overdue</div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:18px;">
+        <h3>Unit temperatures — live gauges <span id="gauge-lastupdate" style="text-transform:none;letter-spacing:0;"></span></h3>
+        <div class="grid cols-3" id="dash-gauges"></div>
+      </div>
+
+      <div class="card">
+        <h3>Upcoming &amp; overdue</h3>
+        <div id="dash-upcoming"></div>
+      </div>
+    </div>
+
+    <!-- DAILY LOG -->
+    <div class="tab-content" id="tab-dailylog">
+      <div class="topbar">
+        <div><h2>Daily Log</h2><div class="sub">Record today's readings and checks</div></div>
+      </div>
+
+      <div class="card" style="margin-bottom:18px;">
+        <h3>Temperature readings — <span id="dl-date-label"></span></h3>
+        <div id="dl-temp-fields"></div>
+      </div>
+
+      <div class="card" style="margin-bottom:18px;">
+        <h3>Other daily checks</h3>
+        <div class="checkline"><input type="checkbox" id="dl-pest"><span class="txt">No pest sightings / droppings observed</span></div>
+        <div class="checkline"><input type="checkbox" id="dl-waste"><span class="txt">Waste segregated &amp; bins emptied, lidded &amp; lined</span></div>
+        <div class="checkline"><input type="checkbox" id="dl-water"><span class="txt">Drinking/cooking water source checked (potable)</span></div>
+        <div class="checkline"><input type="checkbox" id="dl-hygiene"><span class="txt">Staff in clean uniform, hair covered, nails trimmed</span></div>
+        <div class="checkline"><input type="checkbox" id="dl-oil"><span class="txt">Frying oil checked — discarded if reused beyond limit</span></div>
+        <div class="checkline"><input type="checkbox" id="dl-surfaces"><span class="txt">Raw &amp; cooked food areas / boards kept separate</span></div>
+      </div>
+
+      <div class="card" style="margin-bottom:18px;">
+        <h3>Notes</h3>
+        <div class="field">
+          <textarea id="dl-notes" rows="3" placeholder="Anything to flag — e.g. compressor noise on Fridge 2, delayed pest visit..."></textarea>
+        </div>
+      </div>
+
+      <div class="signature-tag" id="dl-signature" style="margin-bottom:14px;"></div>
+      <button class="btn" id="dl-save">Sign &amp; save today's log</button>
+      <span id="dl-saved-msg" style="margin-left:12px;font-size:12px;color:var(--green);"></span>
+    </div>
+
+    <!-- HISTORY -->
+    <div class="tab-content" id="tab-history">
+      <div class="topbar">
+        <div><h2>Log History</h2><div class="sub">Past entries — pull this up if an inspector asks</div></div>
+      </div>
+      <div class="card">
+        <h3>Entries</h3>
+        <div style="overflow-x:auto;">
+          <table id="history-table">
+            <thead><tr id="history-head"></tr></thead>
+            <tbody id="history-body"></tbody>
+          </table>
+        </div>
+        <div class="empty" id="history-empty" style="display:none;">No logs yet. Start with today's entry in Daily Log.</div>
+      </div>
+    </div>
+
+    <!-- CHECKLIST -->
+    <div class="tab-content" id="tab-checklist">
+      <div class="topbar">
+        <div><h2>Compliance Checklists</h2><div class="sub">Based on FSS (Licensing &amp; Registration) Regulations 2011, Schedule 4</div></div>
+      </div>
+      <div id="checklist-container"></div>
+    </div>
+
+    <!-- RULES REFERENCE -->
+    <div class="tab-content" id="tab-rules">
+      <div class="topbar">
+        <div><h2>FSSAI Reference</h2><div class="sub">Plain-English summary of the rules this log tracks against</div></div>
+      </div>
+      <div class="disclaimer">
+        This is a general-purpose summary of common FSSAI Schedule 4 requirements for restaurants, not a substitute for your actual license conditions. Share your FSSAI PDFs (license, inspection checklist, any state circulars) and I'll tighten these thresholds and checklist items to match exactly.
+      </div>
+      <div id="rules-container"></div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="tab-content" id="tab-settings">
+      <div class="topbar">
+        <div><h2>Settings</h2><div class="sub">Restaurant details, license, and fridge/freezer units</div></div>
+      </div>
+
+      <div class="card" style="margin-bottom:18px;">
+        <h3>Restaurant details</h3>
+        <div class="row-fields">
+          <div class="field"><label>Restaurant name</label><input type="text" id="set-name"></div>
+          <div class="field"><label>FSSAI license number</label><input type="text" id="set-license"></div>
+        </div>
+        <div class="row-fields">
+          <div class="field"><label>License expiry date</label><input type="date" id="set-expiry"></div>
+          <div class="field"><label>Location</label><input type="text" id="set-location" value="Mumbai, Maharashtra"></div>
+        </div>
+        <button class="btn" id="set-save-details">Save details</button>
+      </div>
+
+      <div class="card" style="margin-bottom:18px;">
+        <h3>Staff &amp; sign-in PINs</h3>
+        <div id="staff-list"></div>
+        <div class="staff-row" style="margin-top:12px;">
+          <input type="text" id="new-staff-name" placeholder="Staff name">
+          <input type="text" id="new-staff-pin" placeholder="PIN (4-6 digits)" maxlength="6">
+          <select id="new-staff-role">
+            <option value="staff">Staff</option>
+            <option value="manager">Manager</option>
+          </select>
+          <button class="btn small" id="add-staff-btn">+ Add</button>
+        </div>
+        <div style="font-size:11px;color:var(--text-dim);margin-top:8px;">PINs identify who logged an entry — they're not a real security lock. Anyone with the app link and a name+PIN can sign in.</div>
+      </div>
+
+      <div class="card">
+        <h3>Fridge / freezer / hot-holding units</h3>
+        <div id="unit-list"></div>
+        <div class="unit-manage-row" style="margin-top:12px;">
+          <input type="text" id="new-unit-name" placeholder="Unit name, e.g. Walk-in Fridge 1">
+          <select id="new-unit-type" style="max-width:160px;">
+            <option value="cold">Cold storage (≤4°C)</option>
+            <option value="freezer">Freezer (≤-18°C)</option>
+            <option value="hot">Hot-holding (≥60°C)</option>
+          </select>
+          <button class="btn small" id="add-unit-btn">+ Add unit</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ---------------- Storage helpers ---------------- */
+const STORE_KEY = 'app-data';
+let DATA = null;
+let currentUser = null; // {id, name, role} — in-memory only, resets on reload (re-login required)
+
+function defaultData(){
+  return {
+    config: {
+      name: '', license: '', expiry: '', location: 'Mumbai, Maharashtra',
+      units: [
+        {id: 'u1', name: 'Walk-in Fridge', type: 'cold'},
+        {id: 'u2', name: 'Deep Freezer', type: 'freezer'},
+        {id: 'u3', name: 'Hot-holding Counter', type: 'hot'}
+      ],
+      staff: []
+    },
+    dailyLogs: {},
+    checklistState: {}
+  };
+}
+
+function typeRange(type){
+  if(type === 'cold') return {min:0, max:4, unit:'°C', bandLow:0, bandHigh:100};
+  if(type === 'freezer') return {min:-25, max:-18, unit:'°C'};
+  if(type === 'hot') return {min:60, max:90, unit:'°C'};
+  return {min:0, max:100, unit:'°C'};
+}
+
+async function loadData(){
+  try{
+    const res = await window.storage.get(STORE_KEY, true);
+    DATA = res ? JSON.parse(res.value) : defaultData();
+  }catch(e){
+    DATA = defaultData();
+  }
+  if(!DATA.config) DATA.config = defaultData().config;
+  if(!DATA.config.staff) DATA.config.staff = [];
+  if(!DATA.dailyLogs) DATA.dailyLogs = {};
+  if(!DATA.checklistState) DATA.checklistState = {};
+}
+
+async function saveData(){
+  try{
+    await window.storage.set(STORE_KEY, JSON.stringify(DATA), true);
+  }catch(e){
+    console.error('Save failed', e);
+    showToast('Save failed — data may not persist');
+  }
+}
+
+function todayStr(){
+  const d = new Date();
+  return d.toISOString().slice(0,10);
+}
+function prettyDate(str){
+  const d = new Date(str + 'T00:00:00');
+  return d.toLocaleDateString('en-IN', {weekday:'short', day:'numeric', month:'short', year:'numeric'});
+}
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2400);
+}
+
+function fmtSignedAt(iso){
+  const d = new Date(iso);
+  return d.toLocaleString('en-IN', {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'});
+}
+
+/* ---------------- Auth (attribution, not real security) ---------------- */
+function populateLoginNames(){
+  const sel = document.getElementById('login-name');
+  sel.innerHTML = '';
+  if(DATA.config.staff.length === 0){
+    sel.innerHTML = '<option value="__new__">New — create manager account</option>';
+    return;
+  }
+  DATA.config.staff.forEach(s=>{
+    const opt = document.createElement('option');
+    opt.value = s.id; opt.textContent = `${s.name} (${s.role})`;
+    sel.appendChild(opt);
+  });
+}
+
+async function attemptLogin(){
+  const sel = document.getElementById('login-name');
+  const pin = document.getElementById('login-pin').value.trim();
+  const errEl = document.getElementById('login-err');
+  errEl.textContent = '';
+
+  if(sel.value === '__new__'){
+    // first-run: create the initial manager account
+    if(!pin || pin.length < 4){ errEl.textContent = 'Choose a PIN of at least 4 digits.'; return; }
+    const name = prompt('Your name, for the sign-off log:');
+    if(!name || !name.trim()){ errEl.textContent = 'A name is required.'; return; }
+    const id = 's' + Date.now();
+    DATA.config.staff.push({id, name: name.trim(), pin, role: 'manager'});
+    await saveData();
+    currentUser = {id, name: name.trim(), role: 'manager'};
+    enterApp();
+    return;
+  }
+
+  const staff = DATA.config.staff.find(s=>s.id === sel.value);
+  if(!staff){ errEl.textContent = 'Select a valid name.'; return; }
+  if(staff.pin !== pin){ errEl.textContent = 'Incorrect PIN.'; return; }
+  currentUser = {id: staff.id, name: staff.name, role: staff.role};
+  document.getElementById('login-pin').value = '';
+  enterApp();
+}
+
+function enterApp(){
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app-root').style.display = 'flex';
+  document.getElementById('user-chip-name').textContent = currentUser.name;
+  switchTab('dashboard');
+}
+
+function doLogout(){
+  currentUser = null;
+  document.getElementById('login-pin').value = '';
+  document.getElementById('login-err').textContent = '';
+  populateLoginNames();
+  document.getElementById('app-root').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+}
+
+/* ---------------- Master checklist (Schedule 4 based) ---------------- */
+const CHECKLIST = [
+  {cat:'Licensing & Documentation', items:[
+    {id:'lic1', txt:'FSSAI license / registration certificate displayed at premises', freq:'monthly'},
+    {id:'lic2', txt:'FSSAI annual return filed via FoSCoS portal', freq:'annual'},
+    {id:'lic3', txt:'License renewal date checked — renew 30 days before expiry', freq:'monthly'},
+  ]},
+  {cat:'Temperature Control', items:[
+    {id:'tmp1', txt:'Cold storage maintained below 4°C, freezer below -18°C', freq:'daily'},
+    {id:'tmp2', txt:'Hot-holding food maintained above 60°C', freq:'daily'},
+    {id:'tmp3', txt:'Thermometers/gauges calibrated and functioning', freq:'monthly'},
+  ]},
+  {cat:'Food Handler Hygiene', items:[
+    {id:'hyg1', txt:'Staff wearing clean uniform, head covering, no loose jewellery', freq:'daily'},
+    {id:'hyg2', txt:'Handwashing stations stocked with soap and functional', freq:'daily'},
+    {id:'hyg3', txt:'Food handler medical fitness certificates valid', freq:'annual'},
+    {id:'hyg4', txt:'No staff with cuts, boils, or communicable illness handling food', freq:'daily'},
+  ]},
+  {cat:'Premises & Equipment', items:[
+    {id:'prm1', txt:'Smooth, washable, non-absorbent floor and wall surfaces intact', freq:'weekly'},
+    {id:'prm2', txt:'Raw and cooked food prep areas / colour-coded boards kept separate', freq:'daily'},
+    {id:'prm3', txt:'Adequate lighting and ventilation in food prep areas', freq:'weekly'},
+    {id:'prm4', txt:'Cleaning chemicals stored separately, clearly labelled, away from food', freq:'weekly'},
+  ]},
+  {cat:'Pest Control', items:[
+    {id:'pst1', txt:'No signs of pest activity (droppings, gnaw marks, nests)', freq:'daily'},
+    {id:'pst2', txt:'Professional pest control service conducted and recorded', freq:'monthly'},
+    {id:'pst3', txt:'Entry points, drains, and windows pest-proofed', freq:'monthly'},
+  ]},
+  {cat:'Water & Waste', items:[
+    {id:'wtr1', txt:'Water used for cooking/drinking confirmed potable', freq:'daily'},
+    {id:'wtr2', txt:'Water quality lab test on record', freq:'quarterly'},
+    {id:'wst1', txt:'Waste segregated (wet/dry), bins lidded and emptied regularly', freq:'daily'},
+  ]},
+  {cat:'Labelling & Recall Readiness', items:[
+    {id:'lbl1', txt:'Packaged items / ingredients on premises within shelf life, FIFO followed', freq:'weekly'},
+    {id:'lbl2', txt:'Any pre-packaged own-label products comply with Labelling & Display Regs 2020', freq:'monthly'},
+    {id:'rcl1', txt:'Food safety incident / recall contact process known to staff', freq:'quarterly'},
+  ]},
+];
+const FREQ_DAYS = {daily:1, weekly:7, monthly:30, quarterly:90, annual:365};
+
+/* ---------------- Rendering: Dashboard ---------------- */
+function renderDashboard(){
+  document.getElementById('dash-date').textContent = prettyDate(todayStr());
+  const today = todayStr();
+  const log = DATA.dailyLogs[today] || null;
+  const units = DATA.config.units;
+
+  // temps count
+  const readingsCount = log && log.readings ? Object.keys(log.readings).filter(k=>log.readings[k].temp !== '' && log.readings[k].temp !== undefined).length : 0;
+  document.getElementById('dash-temps-count').textContent = `${readingsCount}/${units.length}`;
+
+  // checklist daily count
+  const dailyItems = CHECKLIST.flatMap(c=>c.items).filter(i=>i.freq==='daily');
+  let doneToday = 0;
+  dailyItems.forEach(i=>{
+    const st = DATA.checklistState[i.id];
+    if(st && st.lastDone === today) doneToday++;
+  });
+  document.getElementById('dash-checklist-count').textContent = `${doneToday}/${dailyItems.length}`;
+
+  // alerts: out of range temps + overdue checklist items
+  let alerts = 0;
+  units.forEach(u=>{
+    if(log && log.readings && log.readings[u.id] && log.readings[u.id].temp !== ''){
+      const t = parseFloat(log.readings[u.id].temp);
+      const r = typeRange(u.type);
+      if(!isNaN(t) && (t < r.min || t > r.max)) alerts++;
+    }
+  });
+  const overdue = getOverdueItems();
+  alerts += overdue.length;
+  document.getElementById('dash-alerts-count').textContent = alerts;
+
+  const badge = document.getElementById('dash-compliance-badge');
+  if(alerts === 0 && readingsCount === units.length && units.length>0){
+    badge.innerHTML = `<b style="color:var(--green)">On track</b> — all units logged, no alerts`;
+  } else if(alerts > 0){
+    badge.innerHTML = `<b style="color:var(--red)">${alerts} issue${alerts>1?'s':''}</b> need attention`;
+  } else {
+    badge.innerHTML = `<b>${readingsCount}/${units.length}</b> units logged today`;
+  }
+
+  // gauges
+  const gaugesEl = document.getElementById('dash-gauges');
+  gaugesEl.innerHTML = '';
+  if(units.length === 0){
+    gaugesEl.innerHTML = '<div class="empty">No units configured — add them in Settings.</div>';
+  }
+  units.forEach(u=>{
+    const r = typeRange(u.type);
+    const reading = log && log.readings && log.readings[u.id] ? log.readings[u.id].temp : '';
+    const val = reading === '' || reading === undefined ? null : parseFloat(reading);
+    const inRange = val !== null && !isNaN(val) && val >= r.min && val <= r.max;
+    const span = r.max - r.min;
+    const displayMin = r.min - Math.max(2, span*0.3);
+    const displayMax = r.max + Math.max(2, span*0.3);
+    const pct = val === null ? 0 : Math.max(0, Math.min(100, ((val - displayMin)/(displayMax-displayMin))*100));
+    const fillColor = val === null ? 'var(--text-dim)' : (inRange ? 'var(--green)' : 'var(--red)');
+    const div = document.createElement('div');
+    div.className = 'gaugeplate';
+    div.innerHTML = `
+      <div class="unit-name"><span>${u.name}</span><span class="pill ${val===null?'neutral':(inRange?'ok':'bad')}">${val===null?'no reading':(inRange?'in range':'out of range')}</span></div>
+      <div class="gauge-row">
+        <div class="gauge-track">
+          <div class="gauge-fill" style="width:${val===null?0:pct}%; background:${fillColor};"></div>
+        </div>
+        <div class="gauge-reading" style="color:${fillColor}">${val===null?'—':val+'°'}</div>
+      </div>
+      <div class="gauge-range">target ${r.min}° to ${r.max}°</div>
+    `;
+    gaugesEl.appendChild(div);
+  });
+  document.getElementById('gauge-lastupdate').textContent = log ? '· updated today' : '· not logged today';
+
+  // upcoming/overdue
+  const upEl = document.getElementById('dash-upcoming');
+  upEl.innerHTML = '';
+  const items = [];
+  if(DATA.config.expiry){
+    const days = Math.ceil((new Date(DATA.config.expiry) - new Date())/86400000);
+    if(days < 45){
+      items.push({label:`FSSAI license expiry — ${DATA.config.expiry}`, days});
+    }
+  }
+  overdue.forEach(o=>items.push({label:o.txt+` (${o.freq})`, days: -o.overdueBy}));
+  if(items.length === 0){
+    upEl.innerHTML = '<div class="empty">Nothing overdue. Nice work.</div>';
+  } else {
+    items.sort((a,b)=>a.days-b.days);
+    items.forEach(it=>{
+      const row = document.createElement('div');
+      row.className = 'checkline';
+      const overdueTxt = it.days < 0 ? `overdue by ${Math.abs(it.days)}d` : `due in ${it.days}d`;
+      row.innerHTML = `<span class="txt">${it.label}</span><span class="pill ${it.days<0?'bad':'warn'}">${overdueTxt}</span>`;
+      upEl.appendChild(row);
+    });
+  }
+}
+
+function getOverdueItems(){
+  const today = new Date();
+  const result = [];
+  CHECKLIST.flatMap(c=>c.items).forEach(i=>{
+    if(i.freq === 'daily') return; // daily items don't count as "overdue" long-term, tracked separately
+    const st = DATA.checklistState[i.id];
+    const freqDays = FREQ_DAYS[i.freq];
+    if(!st || !st.lastDone){
+      result.push({...i, overdueBy: freqDays});
+      return;
+    }
+    const last = new Date(st.lastDone);
+    const diffDays = Math.floor((today - last)/86400000);
+    if(diffDays > freqDays){
+      result.push({...i, overdueBy: diffDays - freqDays});
+    }
+  });
+  return result;
+}
+
+/* ---------------- Daily Log tab ---------------- */
+let dailyLogSnapshot = null; // used to detect which readings changed this session, for per-reading signatures
+
+function renderDailyLog(){
+  const today = todayStr();
+  document.getElementById('dl-date-label').textContent = prettyDate(today);
+  const log = DATA.dailyLogs[today] || {readings:{}, checks:{}, notes:'', signatures:[]};
+  dailyLogSnapshot = JSON.parse(JSON.stringify(log));
+
+  const fieldsEl = document.getElementById('dl-temp-fields');
+  fieldsEl.innerHTML = '';
+  DATA.config.units.forEach(u=>{
+    const r = typeRange(u.type);
+    const existing = log.readings[u.id] ? log.readings[u.id].temp : '';
+    const sig = log.readings[u.id] && log.readings[u.id].by ? `<span class="signature-tag" style="margin-left:8px;">✓ <span class="who">${log.readings[u.id].by}</span> · ${fmtSignedAt(log.readings[u.id].at)}</span>` : '';
+    const row = document.createElement('div');
+    row.className = 'row-fields';
+    row.style.marginBottom = '4px';
+    row.innerHTML = `
+      <div class="field" style="margin-bottom:0;">
+        <label>${u.name} <span style="color:var(--text-dim)">(target ${r.min}° to ${r.max}°)</span></label>
+        <input type="number" step="0.1" data-unit="${u.id}" class="temp-input" value="${existing}" placeholder="e.g. ${u.type==='hot'?'65':(u.type==='freezer'?'-19':'3')}">
+      </div>
+      <div class="field" style="margin-bottom:0;">
+        <label>Time checked</label>
+        <input type="time" data-unit="${u.id}" class="time-input" value="${log.readings[u.id] ? log.readings[u.id].time || '' : ''}">
+      </div>
+    `;
+    fieldsEl.appendChild(row);
+    if(sig){
+      const sigRow = document.createElement('div');
+      sigRow.style.marginBottom = '10px';
+      sigRow.innerHTML = sig;
+      fieldsEl.appendChild(sigRow);
+    } else {
+      fieldsEl.lastChild.style.marginBottom = '10px';
+    }
+  });
+  if(DATA.config.units.length === 0){
+    fieldsEl.innerHTML = '<div class="empty">No units configured yet — add fridges/freezers in Settings first.</div>';
+  }
+
+  document.getElementById('dl-pest').checked = !!log.checks.pest;
+  document.getElementById('dl-waste').checked = !!log.checks.waste;
+  document.getElementById('dl-water').checked = !!log.checks.water;
+  document.getElementById('dl-hygiene').checked = !!log.checks.hygiene;
+  document.getElementById('dl-oil').checked = !!log.checks.oil;
+  document.getElementById('dl-surfaces').checked = !!log.checks.surfaces;
+  document.getElementById('dl-notes').value = log.notes || '';
+  document.getElementById('dl-saved-msg').textContent = '';
+
+  const sigEl = document.getElementById('dl-signature');
+  if(log.signatures && log.signatures.length){
+    const sigs = log.signatures.map(s=>`<span class="who">${s.by}</span> at ${fmtSignedAt(s.at)}`).join(' · then ');
+    sigEl.innerHTML = `Signed by: ${sigs}`;
+  } else {
+    sigEl.innerHTML = `Will be signed as <span class="who">${currentUser ? currentUser.name : '—'}</span> when saved`;
+  }
+}
+
+async function saveDailyLog(){
+  const today = todayStr();
+  const now = new Date().toISOString();
+  const readings = {};
+  document.querySelectorAll('.temp-input').forEach(inp=>{
+    const uid = inp.dataset.unit;
+    const timeInp = document.querySelector(`.time-input[data-unit="${uid}"]`);
+    const prior = dailyLogSnapshot.readings ? dailyLogSnapshot.readings[uid] : null;
+    const changed = !prior || prior.temp !== inp.value;
+    readings[uid] = {
+      temp: inp.value,
+      time: timeInp ? timeInp.value : '',
+      by: changed ? (currentUser ? currentUser.name : 'unknown') : (prior ? prior.by : null),
+      at: changed ? now : (prior ? prior.at : null)
+    };
+  });
+  const priorSignatures = dailyLogSnapshot.signatures || [];
+  const entry = {
+    readings,
+    checks: {
+      pest: document.getElementById('dl-pest').checked,
+      waste: document.getElementById('dl-waste').checked,
+      water: document.getElementById('dl-water').checked,
+      hygiene: document.getElementById('dl-hygiene').checked,
+      oil: document.getElementById('dl-oil').checked,
+      surfaces: document.getElementById('dl-surfaces').checked,
+    },
+    notes: document.getElementById('dl-notes').value,
+    signatures: [...priorSignatures, {by: currentUser ? currentUser.name : 'unknown', at: now}],
+    savedAt: now
+  };
+  DATA.dailyLogs[today] = entry;
+  await saveData();
+  document.getElementById('dl-saved-msg').textContent = 'Saved ✓';
+  showToast('Today\'s log signed and saved');
+  renderDailyLog();
+  renderDashboard();
+}
+
+/* ---------------- History tab ---------------- */
+function renderHistory(){
+  const dates = Object.keys(DATA.dailyLogs).sort().reverse();
+  const head = document.getElementById('history-head');
+  const body = document.getElementById('history-body');
+  const emptyEl = document.getElementById('history-empty');
+  if(dates.length === 0){
+    head.innerHTML = ''; body.innerHTML = '';
+    emptyEl.style.display = 'block';
+    return;
+  }
+  emptyEl.style.display = 'none';
+  const units = DATA.config.units;
+  head.innerHTML = `<th>Date</th>${units.map(u=>`<th>${u.name}</th>`).join('')}<th>Checks passed</th><th>Signed by</th>`;
+  body.innerHTML = '';
+  dates.forEach(d=>{
+    const log = DATA.dailyLogs[d];
+    const tr = document.createElement('tr');
+    const tempCells = units.map(u=>{
+      const reading = log.readings && log.readings[u.id] ? log.readings[u.id].temp : '';
+      if(reading === '' || reading === undefined) return '<td style="color:var(--text-dim)">—</td>';
+      const r = typeRange(u.type);
+      const v = parseFloat(reading);
+      const ok = !isNaN(v) && v >= r.min && v <= r.max;
+      const who = log.readings[u.id].by ? ` <span style="color:var(--text-dim);">· ${log.readings[u.id].by}</span>` : '';
+      return `<td style="color:${ok?'var(--green)':'var(--red)'}">${reading}°${who}</td>`;
+    }).join('');
+    const checksPassed = log.checks ? Object.values(log.checks).filter(Boolean).length : 0;
+    const checksTotal = log.checks ? Object.keys(log.checks).length : 0;
+    const signers = log.signatures && log.signatures.length
+      ? [...new Set(log.signatures.map(s=>s.by))].join(', ')
+      : (log.loggedBy || '—');
+    tr.innerHTML = `<td>${prettyDate(d)}</td>${tempCells}<td>${checksPassed}/${checksTotal}</td><td>${signers}</td>`;
+    body.appendChild(tr);
+  });
+}
+
+/* ---------------- Checklist tab ---------------- */
+function renderChecklist(){
+  const container = document.getElementById('checklist-container');
+  container.innerHTML = '';
+  const today = todayStr();
+  CHECKLIST.forEach(cat=>{
+    const catHeader = document.createElement('div');
+    catHeader.className = 'cat-header';
+    catHeader.textContent = cat.cat;
+    container.appendChild(catHeader);
+    const card = document.createElement('div');
+    card.className = 'card';
+    cat.items.forEach(item=>{
+      const st = DATA.checklistState[item.id];
+      const isDoneRelevantPeriod = item.freq === 'daily'
+        ? (st && st.lastDone === today)
+        : (st && st.lastDone && (Math.floor((new Date()-new Date(st.lastDone))/86400000) <= FREQ_DAYS[item.freq]));
+      const row = document.createElement('div');
+      row.className = 'checkline';
+      const lastDoneTxt = st && st.lastDone ? `last done ${prettyDate(st.lastDone)}${st.by ? ` · <span class="who" style="color:var(--teal)">${st.by}</span>` : ''}` : 'never logged';
+      row.innerHTML = `
+        <input type="checkbox" data-id="${item.id}" ${isDoneRelevantPeriod ? 'checked' : ''}>
+        <span class="txt">${item.txt}<br><span style="color:var(--text-dim);font-size:11px;">${lastDoneTxt}</span></span>
+        <span class="freq">${item.freq}</span>
+      `;
+      card.appendChild(row);
+    });
+    container.appendChild(card);
+  });
+
+  container.querySelectorAll('input[type="checkbox"]').forEach(cb=>{
+    cb.addEventListener('change', async (e)=>{
+      const id = e.target.dataset.id;
+      if(e.target.checked){
+        DATA.checklistState[id] = {lastDone: today, by: currentUser ? currentUser.name : 'unknown', at: new Date().toISOString()};
+      } else {
+        DATA.checklistState[id] = {lastDone: null, by: null, at: null};
+      }
+      await saveData();
+      renderChecklist();
+      renderDashboard();
+    });
+  });
+}
+
+/* ---------------- Rules reference tab ---------------- */
+const RULES = [
+  {title:'Temperature control', body:'Cold food storage should be kept at or below 4°C, freezers at or below -18°C, and hot-held food above 60°C to prevent bacterial growth. Log readings at consistent times each day.', tags:['≤4°C cold','≤-18°C freezer','≥60°C hot']},
+  {title:'License display & renewal', body:'Your FSSAI license or registration certificate must be displayed prominently at the premises. Renew at least 30 days before expiry to avoid a lapse — a lapsed license is treated as operating without one.', tags:['FoSCoS portal']},
+  {title:'Food handler hygiene', body:'Staff handling food need valid medical fitness certificates, clean uniforms, head covering, trimmed nails, and no open wounds or communicable illness. Handwashing stations should be stocked and accessible near prep areas.', tags:['annual medical check']},
+  {title:'Premises & equipment', body:'Surfaces should be smooth, washable and non-absorbent. Raw and cooked food must be prepared and stored separately, ideally with colour-coded boards, to avoid cross-contamination.', tags:['colour-coded boards']},
+  {title:'Pest control', body:'Regular professional pest control visits should be documented, with entry points, drains and windows kept pest-proofed. Any sighting should be logged and acted on immediately.', tags:['monthly service']},
+  {title:'Water & waste', body:'Water used in cooking or drinking must be potable, with periodic lab testing on record. Waste should be segregated wet/dry and bins kept lidded and emptied regularly.', tags:['quarterly water test']},
+  {title:'Labelling & recall readiness', body:'Any pre-packaged items sold under your own label must comply with the Labelling & Display Regulations 2020. Businesses should have a basic process in place for handling a food safety incident or recall.', tags:['Labelling Regs 2020']},
+];
+function renderRules(){
+  const container = document.getElementById('rules-container');
+  container.innerHTML = '';
+  RULES.forEach(r=>{
+    const div = document.createElement('div');
+    div.className = 'rule-block';
+    div.innerHTML = `<h4>${r.title}</h4><p>${r.body}</p><div>${r.tags.map(t=>`<span class="threshold-tag">${t}</span>`).join('')}</div>`;
+    container.appendChild(div);
+  });
+}
+
+/* ---------------- Settings tab ---------------- */
+function renderSettings(){
+  document.getElementById('set-name').value = DATA.config.name || '';
+  document.getElementById('set-license').value = DATA.config.license || '';
+  document.getElementById('set-expiry').value = DATA.config.expiry || '';
+  document.getElementById('set-location').value = DATA.config.location || 'Mumbai, Maharashtra';
+
+  const listEl = document.getElementById('unit-list');
+  listEl.innerHTML = '';
+  DATA.config.units.forEach(u=>{
+    const row = document.createElement('div');
+    row.className = 'unit-manage-row';
+    row.innerHTML = `
+      <input type="text" value="${u.name}" data-id="${u.id}" class="unit-name-input">
+      <select data-id="${u.id}" class="unit-type-select" style="max-width:160px;">
+        <option value="cold" ${u.type==='cold'?'selected':''}>Cold storage (≤4°C)</option>
+        <option value="freezer" ${u.type==='freezer'?'selected':''}>Freezer (≤-18°C)</option>
+        <option value="hot" ${u.type==='hot'?'selected':''}>Hot-holding (≥60°C)</option>
+      </select>
+      <button class="btn danger small" data-id="${u.id}" data-action="remove-unit">Remove</button>
+    `;
+    listEl.appendChild(row);
+  });
+
+  listEl.querySelectorAll('.unit-name-input').forEach(inp=>{
+    inp.addEventListener('change', async e=>{
+      const u = DATA.config.units.find(x=>x.id===e.target.dataset.id);
+      if(u) u.name = e.target.value;
+      await saveData();
+      showToast('Unit updated');
+    });
+  });
+  listEl.querySelectorAll('.unit-type-select').forEach(sel=>{
+    sel.addEventListener('change', async e=>{
+      const u = DATA.config.units.find(x=>x.id===e.target.dataset.id);
+      if(u) u.type = e.target.value;
+      await saveData();
+      showToast('Unit updated');
+    });
+  });
+  listEl.querySelectorAll('[data-action="remove-unit"]').forEach(btn=>{
+    btn.addEventListener('click', async e=>{
+      const id = e.target.dataset.id;
+      DATA.config.units = DATA.config.units.filter(x=>x.id!==id);
+      await saveData();
+      renderSettings();
+      showToast('Unit removed');
+    });
+  });
+
+  document.getElementById('sb-restname').textContent = DATA.config.name || 'no restaurant set';
+  renderStaffList();
+}
+
+function renderStaffList(){
+  const listEl = document.getElementById('staff-list');
+  listEl.innerHTML = '';
+  if(DATA.config.staff.length === 0){
+    listEl.innerHTML = '<div class="empty">No staff added yet.</div>';
+    return;
+  }
+  DATA.config.staff.forEach(s=>{
+    const row = document.createElement('div');
+    row.className = 'staff-row';
+    row.innerHTML = `
+      <input type="text" value="${s.name}" data-id="${s.id}" class="staff-name-input">
+      <select data-id="${s.id}" class="staff-role-select">
+        <option value="staff" ${s.role==='staff'?'selected':''}>Staff</option>
+        <option value="manager" ${s.role==='manager'?'selected':''}>Manager</option>
+      </select>
+      <button class="btn ghost small" data-id="${s.id}" data-action="reset-pin">Reset PIN</button>
+      <button class="btn danger small" data-id="${s.id}" data-action="remove-staff">Remove</button>
+    `;
+    listEl.appendChild(row);
+  });
+  listEl.querySelectorAll('.staff-name-input').forEach(inp=>{
+    inp.addEventListener('change', async e=>{
+      const s = DATA.config.staff.find(x=>x.id===e.target.dataset.id);
+      if(s) s.name = e.target.value;
+      await saveData();
+      showToast('Staff updated');
+    });
+  });
+  listEl.querySelectorAll('.staff-role-select').forEach(sel=>{
+    sel.addEventListener('change', async e=>{
+      const s = DATA.config.staff.find(x=>x.id===e.target.dataset.id);
+      if(s) s.role = e.target.value;
+      await saveData();
+      showToast('Staff updated');
+    });
+  });
+  listEl.querySelectorAll('[data-action="reset-pin"]').forEach(btn=>{
+    btn.addEventListener('click', async e=>{
+      const s = DATA.config.staff.find(x=>x.id===e.target.dataset.id);
+      if(!s) return;
+      const pin = prompt(`New PIN for ${s.name}:`);
+      if(!pin || pin.trim().length < 4){ showToast('PIN needs at least 4 digits'); return; }
+      s.pin = pin.trim();
+      await saveData();
+      showToast('PIN reset');
+    });
+  });
+  listEl.querySelectorAll('[data-action="remove-staff"]').forEach(btn=>{
+    btn.addEventListener('click', async e=>{
+      const id = e.target.dataset.id;
+      DATA.config.staff = DATA.config.staff.filter(x=>x.id!==id);
+      await saveData();
+      renderStaffList();
+      showToast('Staff removed');
+    });
+  });
+}
+
+async function addStaff(){
+  const nameInp = document.getElementById('new-staff-name');
+  const pinInp = document.getElementById('new-staff-pin');
+  const roleSel = document.getElementById('new-staff-role');
+  if(!nameInp.value.trim()){ showToast('Enter a name first'); return; }
+  if(!pinInp.value.trim() || pinInp.value.trim().length < 4){ showToast('PIN needs at least 4 digits'); return; }
+  const id = 's' + Date.now();
+  DATA.config.staff.push({id, name: nameInp.value.trim(), pin: pinInp.value.trim(), role: roleSel.value});
+  await saveData();
+  nameInp.value = ''; pinInp.value = '';
+  renderStaffList();
+  showToast('Staff added');
+}
+
+async function addUnit(){
+  const nameInp = document.getElementById('new-unit-name');
+  const typeSel = document.getElementById('new-unit-type');
+  if(!nameInp.value.trim()){ showToast('Enter a unit name first'); return; }
+  const id = 'u' + Date.now();
+  DATA.config.units.push({id, name: nameInp.value.trim(), type: typeSel.value});
+  await saveData();
+  nameInp.value = '';
+  renderSettings();
+  showToast('Unit added');
+}
+
+async function saveDetails(){
+  DATA.config.name = document.getElementById('set-name').value;
+  DATA.config.license = document.getElementById('set-license').value;
+  DATA.config.expiry = document.getElementById('set-expiry').value;
+  DATA.config.location = document.getElementById('set-location').value;
+  await saveData();
+  document.getElementById('sb-restname').textContent = DATA.config.name || 'no restaurant set';
+  showToast('Details saved');
+  renderDashboard();
+}
+
+/* ---------------- Tabs & init ---------------- */
+function switchTab(tab){
+  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active', b.dataset.tab===tab));
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+  if(tab==='dashboard') renderDashboard();
+  if(tab==='dailylog') renderDailyLog();
+  if(tab==='history') renderHistory();
+  if(tab==='checklist') renderChecklist();
+  if(tab==='rules') renderRules();
+  if(tab==='settings') renderSettings();
+}
+
+document.querySelectorAll('nav button').forEach(b=>{
+  b.addEventListener('click', ()=>switchTab(b.dataset.tab));
+});
+document.getElementById('dl-save').addEventListener('click', saveDailyLog);
+document.getElementById('add-unit-btn').addEventListener('click', addUnit);
+document.getElementById('set-save-details').addEventListener('click', saveDetails);
+document.getElementById('add-staff-btn').addEventListener('click', addStaff);
+document.getElementById('login-btn').addEventListener('click', attemptLogin);
+document.getElementById('logout-btn').addEventListener('click', doLogout);
+document.getElementById('login-pin').addEventListener('keydown', e=>{ if(e.key==='Enter') attemptLogin(); });
+document.getElementById('login-name').addEventListener('change', ()=>{
+  document.getElementById('login-err').textContent = '';
+});
+
+(async function init(){
+  await loadData();
+  populateLoginNames();
+  document.getElementById('sb-restname').textContent = DATA.config.name || 'no restaurant set';
+})();
+</script>
+</body>
+</html>
